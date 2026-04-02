@@ -1,23 +1,10 @@
 {
-  "buildCommand": "echo 'Frontend static site ready'",
-  "framework": "static",
-  "public": true,
-  "root": "frontend",
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "python build_frontend.py",
   "rewrites": [
     {
-      "source": "/(?!.*\\.)",
+      "source": "/((?!.*\\.).*)",
       "destination": "/index.html"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        }
-      ]
     }
   ]
 }

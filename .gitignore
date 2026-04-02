@@ -65,6 +65,9 @@ Thumbs.db
 *.temp
 .cache/
 
+# Vercel build output (copied from frontend/)
+public/
+
 # Testing
 .pytest_cache/
 .coverage

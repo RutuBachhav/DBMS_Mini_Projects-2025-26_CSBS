@@ -1,9 +1,11 @@
-// Use environment variable for API URL, fallback to localhost for development
-const API_BASE = typeof process !== 'undefined' && process.env.VITE_API_BASE_URL 
-  ? process.env.VITE_API_BASE_URL 
-  : window.location.hostname === 'localhost' 
-  ? 'http://localhost:5000'
-  : `${window.location.protocol}//${window.location.hostname.replace('canteen', 'api')}`;
+// Local dev: Flask on :5000. Production (e.g. Vercel): same origin, API on this host.
+const API_BASE = (() => {
+  const h = window.location.hostname;
+  if (h === 'localhost' || h === '127.0.0.1') {
+    return 'http://localhost:5000';
+  }
+  return '';
+})();
 
 function showToast(message, type = 'success') {
     const toast = document.createElement('div');
