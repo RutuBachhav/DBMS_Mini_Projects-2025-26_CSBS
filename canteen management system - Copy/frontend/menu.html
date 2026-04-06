@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu - Canteen Management System</title>
+    <link href="css/style.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2><i class="fa-solid fa-utensils"></i> CMS Admin</h2>
+        </div>
+        <ul class="nav-links">
+            <li><a href="dashboard.html"><i class="fa-solid fa-house"></i> Dashboard</a></li>
+            <li><a href="menu.html" class="active"><i class="fa-solid fa-burger"></i> Menu</a></li>
+            <li><a href="orders.html"><i class="fa-solid fa-receipt"></i> Orders</a></li>
+        </ul>
+        <div class="logout-container">
+            <button id="logoutBtn" class="logout-btn"><i class="fa-solid fa-power-off"></i> Logout</button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1 style="font-size: 1.875rem; font-weight: 700;">Menu Management</h1>
+                <p style="color: var(--text-muted); margin-top: 0.5rem;">Manage all canteen items</p>
+            </div>
+            <button class="btn btn-primary" onclick="openModal()"><i class="fa-solid fa-plus"></i> Add Item</button>
+        </header>
+
+        <div class="table-container">
+            <div class="table-header">
+                <h2>All Menu Items</h2>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item Name</th>
+                        <th>Category</th>
+                        <th>Price</th>
+                        <th>Availability</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="menuBody">
+                    <tr><td colspan="5" style="text-align:center;">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Add/Edit Modal -->
+    <div id="itemModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Add New Item</h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="itemForm">
+                    <input type="hidden" id="itemId">
+                    <div class="form-group">
+                        <label>Item Name</label>
+                        <input type="text" id="itemName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="itemCategory" class="form-control" required>
+                            <option value="Meals">Meals</option>
+                            <option value="Snacks">Snacks</option>
+                            <option value="Drinks">Drinks</option>
+                            <option value="Desserts">Desserts</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Price ($)</label>
+                        <input type="number" step="0.01" id="itemPrice" class="form-control" required>
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="itemAvailable" checked>
+                        <label style="margin: 0;">Is Available?</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" style="background:var(--bg-main); color:var(--text-main);" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveItem()">Save Item</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        let items = [];
+
+        async function fetchMenu() {
+            try {
+                const res = await fetch(`${API_BASE}/menu`);
+                items = await res.json();
+                renderMenu();
+            } catch (err) {
+                console.error(err);
+                showToast('Failed to load menu', 'error');
+            }
+        }
+
+        function renderMenu() {
+            const tbody = document.getElementById('menuBody');
+            tbody.innerHTML = '';
+            
+            if (items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem;">No items found</td></tr>';
+                return;
+            }
+
+            items.forEach(item => {
+                const tr = document.createElement('tr');
+                
+                let badgeClass = item.available ? 'badge-success' : 'badge-danger';
+                let statusText = item.available ? 'Available' : 'Out of Stock';
+
+                tr.innerHTML = `
+                    <td style="font-weight: 500;">${item.item_name}</td>
+                    <td>${item.category}</td>
+                    <td style="font-weight: 600;">$${item.price.toFixed(2)}</td>
+                    <td><span class="badge ${badgeClass}">${statusText}</span></td>
+                    <td style="display:flex; gap: 0.5rem;">
+                        <button class="btn btn-primary btn-small" onclick="editItem('${item._id}')"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn btn-danger btn-small" onclick="deleteItem('${item._id}')"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openModal() {
+            document.getElementById('modalTitle').innerText = 'Add New Item';
+            document.getElementById('itemForm').reset();
+            document.getElementById('itemId').value = '';
+            document.getElementById('itemAvailable').checked = true;
+            document.getElementById('itemModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('itemModal').classList.remove('active');
+        }
+
+        function editItem(id) {
+            const item = items.find(i => i._id === id);
+            if (!item) return;
+
+            document.getElementById('modalTitle').innerText = 'Edit Item';
+            document.getElementById('itemId').value = item._id;
+            document.getElementById('itemName').value = item.item_name;
+            document.getElementById('itemCategory').value = item.category;
+            document.getElementById('itemPrice').value = item.price;
+            document.getElementById('itemAvailable').checked = item.available;
+            
+            document.getElementById('itemModal').classList.add('active');
+        }
+
+        async function saveItem() {
+            const id = document.getElementById('itemId').value;
+            const name = document.getElementById('itemName').value;
+            const category = document.getElementById('itemCategory').value;
+            const price = parseFloat(document.getElementById('itemPrice').value);
+            const available = document.getElementById('itemAvailable').checked;
+
+            if (!name || isNaN(price)) {
+                showToast('Please fill valid details', 'error');
+                return;
+            }
+
+            const payload = { item_name: name, category, price, available };
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `${API_BASE}/menu/${id}` : `${API_BASE}/menu`;
+
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                
+                if (res.ok) {
+                    showToast(`Item ${id ? 'updated' : 'added'} successfully`);
+                    closeModal();
+                    fetchMenu();
+                } else {
+                    showToast('Action failed', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Network error', 'error');
+            }
+        }
+
+        async function deleteItem(id) {
+            if (!confirm('Are you sure you want to delete this item?')) return;
+            
+            try {
+                const res = await fetch(`${API_BASE}/menu/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    showToast('Item deleted');
+                    fetchMenu();
+                } else {
+                    showToast('Failed to delete item', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Network error', 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchMenu);
+    </script>
+</body>
+</html>

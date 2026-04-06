@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Canteen Management System</title>
+    <link href="css/style.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2><i class="fa-solid fa-utensils"></i> CMS Admin</h2>
+        </div>
+        <ul class="nav-links">
+            <li><a href="dashboard.html" class="active"><i class="fa-solid fa-house"></i> Dashboard</a></li>
+            <li><a href="menu.html"><i class="fa-solid fa-burger"></i> Menu</a></li>
+            <li><a href="orders.html"><i class="fa-solid fa-receipt"></i> Orders</a></li>
+        </ul>
+        <div class="logout-container">
+            <button id="logoutBtn" class="logout-btn"><i class="fa-solid fa-power-off"></i> Logout</button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header style="margin-bottom: 2rem;">
+            <h1 style="font-size: 1.875rem; font-weight: 700;">Dashboard Overview</h1>
+            <p style="color: var(--text-muted); margin-top: 0.5rem;">Welcome back! Here's what's happening today.</p>
+        </header>
+
+        <!-- Stats Cards -->
+        <div class="dashboard-cards">
+            <div class="card">
+                <div class="card-icon blue">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+                <div class="card-info">
+                    <h3>Today's Revenue</h3>
+                    <p id="totalRevenue">$0.00</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-icon green">
+                    <i class="fa-solid fa-shopping-bag"></i>
+                </div>
+                <div class="card-info">
+                    <h3>Today's Orders</h3>
+                    <p id="totalOrders">0</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-icon yellow">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <div class="card-info">
+                    <h3>Total Menu Items</h3>
+                    <p id="totalMenuItems">0</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Orders Preview (Optional feature to enhance dashboard) -->
+        <div class="table-container">
+            <div class="table-header">
+                <h2>Recent Orders</h2>
+                <a href="orders.html" class="btn btn-primary btn-small">View All</a>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Status</th>
+                        <th>Items</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody id="recentOrdersBody">
+                    <tr><td colspan="4" style="text-align:center;">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script src="js/app.js"></script>
+    <script>
+        async function fetchDashboardStats() {
+            try {
+                const res = await fetch(`${API_BASE}/sales/today`);
+                const data = await res.json();
+                
+                document.getElementById('totalRevenue').innerText = `$${data.total_revenue.toFixed(2)}`;
+                document.getElementById('totalOrders').innerText = data.total_orders;
+                document.getElementById('totalMenuItems').innerText = data.total_menu_items;
+
+                // Fetch recent orders for table
+                const ordersRes = await fetch(`${API_BASE}/orders`);
+                const orders = await ordersRes.json();
+                renderRecentOrders(orders.slice(0, 5)); // show last 5
+            } catch (err) {
+                console.error(err);
+                showToast('Failed to load dashboard data', 'error');
+            }
+        }
+
+        function renderRecentOrders(orders) {
+            const tbody = document.getElementById('recentOrdersBody');
+            tbody.innerHTML = '';
+            
+            if (orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 2rem;">No orders yet today</td></tr>';
+                return;
+            }
+
+            orders.forEach(order => {
+                const tr = document.createElement('tr');
+                
+                let badgeClass = 'badge-info';
+                if(order.status === 'completed') badgeClass = 'badge-success';
+                if(order.status === 'preparing') badgeClass = 'badge-warning';
+
+                const orderId = order._id.substring(order._id.length - 6).toUpperCase();
+                
+                // Truncate items list
+                const itemsStr = order.items.map(i => `${i.quantity}x ${i.name}`).join(', ');
+                const itemsDisplay = itemsStr.length > 30 ? itemsStr.substring(0, 30) + '...' : itemsStr;
+
+                tr.innerHTML = `
+                    <td style="font-family: monospace; font-weight: 600;">#${orderId}</td>
+                    <td><span class="badge ${badgeClass}">${order.status.toUpperCase()}</span></td>
+                    <td title="${itemsStr}">${itemsDisplay}</td>
+                    <td style="font-weight: 600;">$${order.total_price.toFixed(2)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchDashboardStats);
+    </script>
+</body>
+</html>
