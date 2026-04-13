@@ -1,0 +1,18 @@
+{
+  "name": "stockup",
+  "version": "1.0.0",
+  "description": "A full-stack inventory management system built with Node.js, Express, React, and MySQL.",
+  "main": "index.js",
+  "scripts": {
+    "start-all": "node start.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "wait-on": "^9.0.5"
+  }
+}
