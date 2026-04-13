@@ -31,10 +31,6 @@ This project is split into **two separate Vercel deployments**:
 4. Vercel auto-detects the `vercel.json` config
 5. Add these **Environment Variables** in Vercel dashboard:
 
-| Variable | Value |
-|----------|-------|
-| `MONGODB_URI` | `mongodb+srv://tanishkaphalke08_db_user:h4pv2q9XyaWeYvL1@cluster0.mckdqhv.mongodb.net/booknest?appName=Cluster0` |
-| `JWT_SECRET` | `booknest_jwt_secret_2024_xK9mP3nQ7wL` |
 
 6. Deploy → note the URL (e.g. `https://booknest-server.vercel.app`)
 
