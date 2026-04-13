@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orders - Canteen Management System</title>
+    <link href="css/style.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* ── New Order Modal ── */
+        .order-modal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            max-height: 360px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .menu-card {
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 0.75rem;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            background: var(--bg-main);
+        }
+
+        .menu-card:hover { border-color: var(--primary-color); background: #fff; }
+        .menu-card.selected { border-color: var(--primary-color); background: rgba(79,70,229,0.05); }
+
+        .menu-card-name { font-weight: 600; font-size: 0.875rem; color: var(--text-main); }
+        .menu-card-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+        .menu-card-price { font-weight: 700; color: var(--primary-color); font-size: 0.9rem; margin-top: 4px; }
+
+        .qty-control {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .menu-card.selected .qty-control { display: flex; }
+
+        .qty-btn {
+            width: 26px; height: 26px;
+            border-radius: 50%;
+            border: none;
+            background: var(--primary-color);
+            color: #fff;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .qty-btn:hover { background: var(--primary-hover); }
+        .qty-display { font-weight: 700; min-width: 20px; text-align: center; font-size: 0.9rem; }
+
+        .check-badge {
+            position: absolute;
+            top: 6px; right: 8px;
+            color: var(--primary-color);
+            font-size: 1rem;
+            display: none;
+        }
+        .menu-card.selected .check-badge { display: block; }
+
+        .order-summary-bar {
+            background: var(--bg-main);
+            border-radius: var(--radius-md);
+            padding: 0.75rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .order-summary-bar span { font-size: 0.875rem; color: var(--text-muted); }
+        .order-summary-bar strong { font-size: 1.1rem; color: var(--text-main); }
+
+        .modal-content.wide { max-width: 640px; }
+
+        .empty-menu-msg {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        /* ── Delete confirmation ── */
+        .btn-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.3rem 0.5rem;
+            border-radius: var(--radius-md);
+            transition: var(--transition);
+            font-size: 0.9rem;
+        }
+        .btn-icon.edit { color: var(--primary-color); }
+        .btn-icon.del  { color: var(--danger-color); }
+        .btn-icon:hover { opacity: 0.7; }
+    </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <h2><i class="fa-solid fa-utensils"></i> CMS Admin</h2>
+    </div>
+    <ul class="nav-links">
+        <li><a href="dashboard.html"><i class="fa-solid fa-house"></i> Dashboard</a></li>
+        <li><a href="menu.html"><i class="fa-solid fa-burger"></i> Menu</a></li>
+        <li><a href="orders.html" class="active"><i class="fa-solid fa-receipt"></i> Orders</a></li>
+    </ul>
+    <div class="logout-container">
+        <button id="logoutBtn" class="logout-btn"><i class="fa-solid fa-power-off"></i> Logout</button>
+    </div>
+</aside>
+
+<!-- Main Content -->
+<main class="main-content">
+    <header style="margin-bottom:2rem; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+            <h1 style="font-size:1.875rem; font-weight:700;">Orders Management</h1>
+            <p style="color:var(--text-muted); margin-top:0.5rem;">Place and track live orders</p>
+        </div>
+        <button class="btn btn-primary" onclick="openNewOrderModal()">
+            <i class="fa-solid fa-plus"></i> New Order
+        </button>
+    </header>
+
+    <!-- Filter bar -->
+    <div style="display:flex; gap:0.5rem; margin-bottom:1.25rem; flex-wrap:wrap;">
+        <button class="btn filter-btn active" data-status="all" onclick="setFilter('all', this)">All</button>
+        <button class="btn filter-btn" data-status="pending"   onclick="setFilter('pending', this)"  style="background:#DBEAFE;color:#1E40AF;">Pending</button>
+        <button class="btn filter-btn" data-status="preparing" onclick="setFilter('preparing', this)" style="background:#FEF3C7;color:#92400E;">Preparing</button>
+        <button class="btn filter-btn" data-status="completed" onclick="setFilter('completed', this)" style="background:#D1FAE5;color:#065F46;">Completed</button>
+    </div>
+
+    <div class="table-container">
+        <div class="table-header">
+            <h2>All Orders</h2>
+            <button class="btn btn-small" onclick="fetchOrders()" style="background:var(--bg-main);">
+                <i class="fa-solid fa-rotate-right"></i> Refresh
+            </button>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Date &amp; Time</th>
+                    <th>Items</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="ordersBody">
+                <tr><td colspan="6" style="text-align:center; padding:2rem;">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<!-- ══ NEW ORDER MODAL ══ -->
+<div id="newOrderModal" class="modal">
+    <div class="modal-content wide">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-cart-plus" style="color:var(--primary-color);margin-right:0.5rem;"></i>New Order</h3>
+            <button class="close-btn" onclick="closeNewOrderModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.75rem;">
+                Click an item to select it, then adjust the quantity.
+            </p>
+            <div id="menuCardGrid" class="order-modal-grid">
+                <div class="empty-menu-msg"><i class="fa-solid fa-spinner fa-spin"></i> Loading menu...</div>
+            </div>
+
+            <div class="order-summary-bar">
+                <span>Selected: <strong id="selectedCount">0</strong> item(s)</span>
+                <span>Total: <strong id="orderTotal">$0.00</strong></span>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn" style="background:var(--bg-main);color:var(--text-main);" onclick="closeNewOrderModal()">Cancel</button>
+            <button id="placeOrderBtn" class="btn btn-primary" onclick="placeOrder()">
+                <i class="fa-solid fa-check"></i> Place Order
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+    let allOrders = [];
+    let currentFilter = 'all';
+    let menuItems = [];       // all available menu items
+    let selectedItems = {};   // { item_id: { item, qty } }
+
+    /* ───────── ORDERS ───────── */
+    async function fetchOrders() {
+        try {
+            const res = await fetch(`${API_BASE}/orders`);
+            allOrders = await res.json();
+            renderOrders();
+        } catch (err) {
+            console.error(err);
+            showToast('Failed to load orders', 'error');
+        }
+    }
+
+    function setFilter(status, btn) {
+        currentFilter = status;
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderOrders();
+    }
+
+    function renderOrders() {
+        const tbody = document.getElementById('ordersBody');
+        tbody.innerHTML = '';
+
+        const filtered = currentFilter === 'all'
+            ? allOrders
+            : allOrders.filter(o => o.status === currentFilter);
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">No ${currentFilter === 'all' ? '' : currentFilter + ' '}orders found</td></tr>`;
+            return;
+        }
+
+        filtered.forEach(order => {
+            const tr = document.createElement('tr');
+
+            const badgeMap = { pending: 'badge-info', preparing: 'badge-warning', completed: 'badge-success' };
+            const badgeClass = badgeMap[order.status] || 'badge-info';
+            const orderId = order._id.slice(-6).toUpperCase();
+
+            const d = new Date(order.created_at);
+            const dateStr = isNaN(d) ? '—' : d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+            const itemsHtml = order.items.map(i => `<div>${i.quantity}× ${i.name}</div>`).join('');
+
+            let actionBtn = '';
+            if (order.status === 'pending') {
+                actionBtn = `<button class="btn btn-warning btn-small" onclick="updateStatus('${order._id}','preparing')"><i class="fa-solid fa-fire-burner"></i> Start Prep</button>`;
+            } else if (order.status === 'preparing') {
+                actionBtn = `<button class="btn btn-primary btn-small" onclick="updateStatus('${order._id}','completed')"><i class="fa-solid fa-circle-check"></i> Complete</button>`;
+            } else {
+                actionBtn = `<span style="font-size:0.75rem; color:var(--text-muted);">Done</span>`;
+            }
+
+            tr.innerHTML = `
+                <td style="font-family:monospace;font-weight:700;">#${orderId}</td>
+                <td style="font-size:0.8rem;color:var(--text-muted);">${dateStr}</td>
+                <td style="font-size:0.8rem;line-height:1.7;">${itemsHtml}</td>
+                <td style="font-weight:700;">$${order.total_price.toFixed(2)}</td>
+                <td><span class="badge ${badgeClass}">${order.status.toUpperCase()}</span></td>
+                <td>${actionBtn}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function updateStatus(id, status) {
+        try {
+            const res = await fetch(`${API_BASE}/orders/${id}`, {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ status })
+            });
+            if (res.ok) {
+                showToast(`Order marked as ${status}`);
+                fetchOrders();
+            } else {
+                showToast('Failed to update status', 'error');
+            }
+        } catch (err) {
+            showToast('Network error', 'error');
+        }
+    }
+
+    /* ───────── NEW ORDER MODAL ───────── */
+    async function openNewOrderModal() {
+        selectedItems = {};
+        document.getElementById('newOrderModal').classList.add('active');
+        updateSummaryBar();
+
+        // Fetch menu
+        try {
+            const res = await fetch(`${API_BASE}/menu`);
+            menuItems = (await res.json()).filter(i => i.available);
+            renderMenuCards();
+        } catch (err) {
+            document.getElementById('menuCardGrid').innerHTML =
+                `<div class="empty-menu-msg" style="color:var(--danger-color);"><i class="fa-solid fa-circle-exclamation"></i> Failed to load menu</div>`;
+        }
+    }
+
+    function closeNewOrderModal() {
+        document.getElementById('newOrderModal').classList.remove('active');
+    }
+
+    function renderMenuCards() {
+        const grid = document.getElementById('menuCardGrid');
+        grid.innerHTML = '';
+
+        if (menuItems.length === 0) {
+            grid.innerHTML = `<div class="empty-menu-msg">No available items. Add items in the Menu page first.</div>`;
+            return;
+        }
+
+        menuItems.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'menu-card';
+            div.id = `card-${item._id}`;
+            div.innerHTML = `
+                <i class="fa-solid fa-circle-check check-badge"></i>
+                <div class="menu-card-name">${item.item_name}</div>
+                <div class="menu-card-meta">${item.category}</div>
+                <div class="menu-card-price">$${item.price.toFixed(2)}</div>
+                <div class="qty-control">
+                    <button class="qty-btn" onclick="changeQty('${item._id}', -1, event)">−</button>
+                    <span class="qty-display" id="qty-${item._id}">1</span>
+                    <button class="qty-btn" onclick="changeQty('${item._id}', +1, event)">+</button>
+                </div>
+            `;
+            div.addEventListener('click', () => toggleItem(item));
+            grid.appendChild(div);
+        });
+    }
+
+    function toggleItem(item) {
+        const card = document.getElementById(`card-${item._id}`);
+        if (selectedItems[item._id]) {
+            delete selectedItems[item._id];
+            card.classList.remove('selected');
+        } else {
+            selectedItems[item._id] = { item, qty: 1 };
+            card.classList.add('selected');
+            document.getElementById(`qty-${item._id}`).innerText = 1;
+        }
+        updateSummaryBar();
+    }
+
+    function changeQty(id, delta, event) {
+        event.stopPropagation();
+        if (!selectedItems[id]) return;
+        let newQty = selectedItems[id].qty + delta;
+        if (newQty < 1) newQty = 1;
+        selectedItems[id].qty = newQty;
+        document.getElementById(`qty-${id}`).innerText = newQty;
+        updateSummaryBar();
+    }
+
+    function updateSummaryBar() {
+        const count = Object.keys(selectedItems).length;
+        const total = Object.values(selectedItems).reduce((sum, { item, qty }) => sum + item.price * qty, 0);
+        document.getElementById('selectedCount').innerText = count;
+        document.getElementById('orderTotal').innerText = `$${total.toFixed(2)}`;
+    }
+
+    async function placeOrder() {
+        const entries = Object.values(selectedItems);
+        if (entries.length === 0) {
+            showToast('Please select at least one item', 'error');
+            return;
+        }
+
+        const items = entries.map(({ item, qty }) => ({
+            item_id: item._id,
+            name: item.item_name,
+            quantity: qty,
+            price: item.price
+        }));
+
+        const btn = document.getElementById('placeOrderBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Placing...';
+
+        try {
+            const res = await fetch(`${API_BASE}/orders`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ items })
+            });
+
+            if (res.ok) {
+                showToast('Order placed successfully! 🎉');
+                closeNewOrderModal();
+                fetchOrders();
+            } else {
+                const err = await res.json();
+                showToast(err.error || 'Failed to place order', 'error');
+            }
+        } catch (err) {
+            showToast('Network error — is the backend running?', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Place Order';
+        }
+    }
+
+    /* filter button active style override */
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.filter-btn').forEach(b => b.style.fontWeight = '400');
+            btn.style.fontWeight = '700';
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', fetchOrders);
+</script>
+</body>
+</html>

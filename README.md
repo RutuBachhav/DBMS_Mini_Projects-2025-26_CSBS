@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # BookNest — Smart Library Management System
 
 ## Local Development
@@ -55,3 +56,6 @@ This project is split into **two separate Vercel deployments**:
 - Set `VITE_API_URL` to your **actual deployed backend URL** + `/api`
 - The backend must be deployed first so you have the URL
 - Environment variables with `VITE_` prefix are baked into the frontend at build time
+=======
+
+>>>>>>> e468c4c52fc192dd755e03353b61b7c9aff6a9b6
